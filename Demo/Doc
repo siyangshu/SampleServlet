@@ -1,0 +1,58 @@
+default master address: 127.0.0.1:8080
+work1 address: 127.0.0.1:8081
+
+caution:
+1. in /workerstatus, the servlet will retrieve parameters like `port`, not only from query string but also message body.
+2. the key-value fed in reduce should not be larger than 1024, because the reducer uses bufferedReader.mark(1024) to read ahead and roll back
+3. a sample job form request:
+  job: edu.upenn.cis455.mapreduce.job.WordCount
+  input directory: ./static/word_count_data
+  output directory: ./static/word_count_result
+  The number of map threads to run on each worker: 10
+  The number of reduce threads to run on each worker: 10
+4. In default users can visit /static/word_count_data to see the input data, and visit /static/word_count_result to see the result
+5. to create a new worker.war: modify web.xml (storagedir, port), ant all, 
+6. you could send any GET request to WorkerServlet to verify if WorkerServlet is running. it will return "hello"
+7. the directory in storagedir should end up with /, and use absolute path.
+
+- XML format:
+-- status page
+  <worker_collection>
+    <worker>
+      <ip></ip>
+      <port></port>
+      <status></status>
+      <job></job>
+      <keys_read></keys_read>
+      <keys_written></keys_written>
+    </worker>
+    <worker>
+    ...
+    </worker>
+  </worker_collection>
+  
+- HTML form format:
+-- for submitting jobs (in /status):
+  will post to /job
+  <input type="text" name="job">
+  <input type="text" name="input_directory">
+  <input type="text" name="output_directory">
+  <input type="text" name="map_number">
+  <input type="text" name="reduce_number">
+  
+- servlet init param
+-- master (IP:port)
+-- storagedir
+-- port (listening port)
+
+- file name
+  in spool-out directory, each worker has a output file like "worker1". index start from 1
+  in spool-in directory, it has a file called `reduce_data`
+  
+- url patttern
+-- WorkerServlet
+  POST /reset_output
+    will remove the output file if exist
+  
+- test file
+-- ./static/word_count_data
