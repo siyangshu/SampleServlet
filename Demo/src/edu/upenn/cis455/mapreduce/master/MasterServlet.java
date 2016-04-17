@@ -54,7 +54,7 @@ public class MasterServlet extends HttpServlet {
 		sop("here1");
 		connector.createItems();
 		sop("here2");
-		printMessage(out, "hello world");
+		printMessage(out, "here hello world");
 	}
 
 	@Override
