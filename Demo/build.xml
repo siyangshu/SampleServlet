@@ -1,5 +1,6 @@
 <project name="Demo" default="all" basedir="./">
   <target name="init">
+  	<tstamp/>
     <mkdir dir="target/master/WEB-INF/classes"/>
     <mkdir dir="target/worker/WEB-INF/classes"/>
     <mkdir dir="classes"/>
