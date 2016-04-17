@@ -5,59 +5,28 @@
     <mkdir dir="classes"/>
   </target>
   
-  <target name="compile-jobs" depends="init">
-    <javac srcdir="src" destdir="classes" includes="**/job/*.java,**/Job.java,**/Context.java" deprecation="on"
-     debug="true" includeantruntime="false" classpath="classes">
-       <compilerarg value="-Xlint"/>
-    </javac>
-  </target>
-  
-  <target name="compile-master" depends="init">
-    <javac srcdir="src" destdir="target/master/WEB-INF/classes" includes="**/master/*.java,**/job/*.java,**/mapreduce/*.java" deprecation="on"
+  <target name="compile-indexer" depends="init">
+    <javac srcdir="src" destdir="target/indexer/WEB-INF/classes" includes="**/indexer/*.java" deprecation="on"
      debug="true" includeantruntime="false" classpath="lib/servlet-api.jar:lib/aws-java-sdk-1.10.69.jar">
        <compilerarg value="-Xlint"/>
     </javac>
   </target>
-  
-  <target name="compile-worker" depends="init">
-    <javac srcdir="src" destdir="target/worker/WEB-INF/classes" includes="**/worker/*.java,**/job/*.java,**/mapreduce/*.java" deprecation="on"
-     debug="true" includeantruntime="false" classpath="lib/servlet-api.jar">
-       <compilerarg value="-Xlint"/>
-    </javac>
-  </target>
 
-  <target name="all" depends="war-master,war-worker,compile-jobs"/>
+  <target name="all" depends="war-indexer"/>
   
-  <target name="war-master" depends="compile-master">
-    <jar destfile="master.war">
-      <fileset dir="target/master/" includes="WEB-INF/classes/**/*.class"/>
-      <fileset dir="target/master/" includes="WEB-INF/lib/*.jar"/>
-      <fileset dir="target/master/" includes="WEB-INF/*.xml"/>
+  <target name="war-indexer" depends="compile-indexer">
+    <jar destfile="indexer.war">
+      <fileset dir="target/indexer/" includes="WEB-INF/classes/**/*.class"/>
+      <fileset dir="target/indexer/" includes="WEB-INF/lib/*.jar"/>
+      <fileset dir="target/indexer/" includes="WEB-INF/*.xml"/>
       <zipfileset dir="lib/" includes="*.jar" prefix="WEB-INF/lib/"/>
       <zipfileset dir="static/" prefix="static"/>
     </jar>
   </target>
-
-  <target name="war-worker" depends="compile-worker">
-    <jar destfile="worker.war">
-      <fileset dir="target/worker/" includes="WEB-INF/classes/**/*.class"/>
-      <fileset dir="target/worker/" includes="WEB-INF/lib/*.jar"/>
-      <fileset dir="target/worker/" includes="WEB-INF/*.xml"/>
-      <zipfileset dir="static/" prefix="static"/>
-    </jar>
-  </target>
-  
-  <target name="pack" description="Create an archive for submission">
-    <zip destfile="submit-hw3.zip">
-      <zipfileset dir="." excludes="target/**,**/*.class,submit-hw3.zip,master.war,worker*.war"/>
-    </zip>
-  </target>
   
   <target name="clean">
-    <delete dir="target/master/WEB-INF/classes"/>
-    <delete dir="target/worker/WEB-INF/classes"/>
+    <delete dir="target/indexer/WEB-INF/classes"/>
     <delete dir="classes"/>
-    <delete file="master.war"/>
-    <delete file="worker.war"/>
+    <delete file="indexer.war"/>
   </target>
 </project>

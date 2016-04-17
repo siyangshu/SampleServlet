@@ -34,9 +34,8 @@ public class DynamodbConnector {
 	public void createItems() {
 		IndexerItem item = new IndexerItem();
 		item.setUrl("www.google.com");
-		item.setWord("google");
+		item.setWord("google2");
 		mapper.save(item); 
-		sop("here");
 		
 //		Table table = dynamoDB.getTable(tableName);
 //        try {
