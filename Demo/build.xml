@@ -33,6 +33,7 @@
       <fileset dir="target/master/" includes="WEB-INF/classes/**/*.class"/>
       <fileset dir="target/master/" includes="WEB-INF/lib/*.jar"/>
       <fileset dir="target/master/" includes="WEB-INF/*.xml"/>
+      <zipfileset dir="lib/" includes="*.jar" prefix="WEB-INF/lib/"/>
       <zipfileset dir="static/" prefix="static"/>
     </jar>
   </target>
