@@ -36,6 +36,7 @@ public class DynamodbConnector {
 		item.setUrl("www.google.com");
 		item.setWord("google");
 		mapper.save(item); 
+		sop("here");
 		
 //		Table table = dynamoDB.getTable(tableName);
 //        try {
