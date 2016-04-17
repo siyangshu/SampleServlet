@@ -14,7 +14,7 @@
   
   <target name="compile-master" depends="init">
     <javac srcdir="src" destdir="target/master/WEB-INF/classes" includes="**/master/*.java,**/job/*.java,**/mapreduce/*.java" deprecation="on"
-     debug="true" includeantruntime="false" classpath="lib/servlet-api.jar:lib/aws-java-sdk.jar">
+     debug="true" includeantruntime="false" classpath="lib/servlet-api.jar:lib/aws-java-sdk-1.10.69.jar">
        <compilerarg value="-Xlint"/>
     </javac>
   </target>
