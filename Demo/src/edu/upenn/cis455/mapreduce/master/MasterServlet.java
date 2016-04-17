@@ -51,7 +51,9 @@ public class MasterServlet extends HttpServlet {
 
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws java.io.IOException {
 		PrintWriter out = response.getWriter();
+		sop("here1");
 		connector.createItems();
+		sop("here2");
 		printMessage(out, "hello world");
 	}
 
