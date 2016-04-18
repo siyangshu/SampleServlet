@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.auth.AWSCredentials;
@@ -41,7 +42,7 @@ public class DynamodbConnector {
 		hit.capitalization = "ALL UPPERCASE";
 		hit.font = "14";
 		hit.position = 100;
-		List<Hit> hits = new ArrayList<>();
+		Set<Hit> hits = new HashSet<>();
 		hits.add(hit);
 		item.setHits(hits);
 		mapper.save(item); 
