@@ -37,6 +37,11 @@ public class DynamodbConnector {
     public void writeItem(IndexerItem item) {
     	mapper.save(item);
     }
+    
+    public IndexerItem readItem(String word, String url) {
+    	IndexerItem item = mapper.load(IndexerItem.class, word, url);
+    	return item;
+    }
 
 	public void createItems() {
 		IndexerItem item = new IndexerItem();

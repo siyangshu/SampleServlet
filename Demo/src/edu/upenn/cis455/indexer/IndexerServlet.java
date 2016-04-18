@@ -50,7 +50,6 @@ public class IndexerServlet extends HttpServlet {
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws java.io.IOException {
 		String path = request.getPathInfo();
 		PrintWriter out = response.getWriter();
-		sop(path);
 		if (path.equals("/login")) {
 			out.write("<!DOCTYPE html><html><body><form action=\"login\" method=\"post\">  name:<br>  <input type=\"text\" name=\"name\">  <br>  password:<br>  <input type=\"text\" name=\"password\">  <br><br>  <input type=\"submit\" value=\"submit\"></form> </body></html>");
 			return;
@@ -66,8 +65,14 @@ public class IndexerServlet extends HttpServlet {
         	printMessage(out, "Please login first");
         	return;
         }  
+        
 	    if (path.equals("/parse_content_form")) {
 			out.write("<!DOCTYPE html><html><body><form action=\"parse_content\" method=\"post\">  url:<br>  <input type=\"text\" name=\"url\">  <br>  content:<br>  <input type=\"text\" name=\"content\">  <br><br>  <input type=\"submit\" value=\"click to submit\"></form> </body></html>");
+		} else if (path.equals("/get_hits")) {
+			String word = request.getParameter("word");
+			String url = request.getParameter("url");
+			IndexerItem item = connector.readItem(word, url);
+			printMessage(out, item.toString());
 		} else {
 			printMessage(out, "Invalid get path: " + path);
 		}
