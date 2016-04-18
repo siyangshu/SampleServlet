@@ -15,7 +15,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.JsonMarshaller;
 public class IndexerItem {
 	private String word;
 	private String url;
-	private Set<Hit> hits;
+	private List<Hit> hits;
         
     @DynamoDBHashKey(attributeName="WORD")  
     public String getWord() { return word;}
@@ -25,9 +25,9 @@ public class IndexerItem {
     public String getUrl() {return url; }
     public void setUrl(String url) { this.url = url; }
     
-    @DynamoDBMarshalling (marshallerClass = HitJSONMarshaller.class)
-    public Set<Hit> getHits() { return hits; }    
-    public void setHits(Set<Hit> hits) { this.hits = hits; }
+    @DynamoDBAttribute(attributeName = "hits")
+    public List<Hit> getHits() { return hits; }    
+    public void setHits(List<Hit> hits) { this.hits = hits; }
 
 }
 

@@ -39,10 +39,10 @@ public class DynamodbConnector {
 		item.setWord("new");
 		item.setUrl("www.google.com");
 		Hit hit = new Hit();
-		hit.capitalization = "ALL UPPERCASE";
-		hit.font = "14";
-		hit.position = 100;
-		Set<Hit> hits = new HashSet<>();
+		hit.setCapitalization("ALL UPPERCASE");
+		hit.setFont("14");
+		hit.setPosition(100);
+		List<Hit> hits = new ArrayList<>();
 		hits.add(hit);
 		item.setHits(hits);
 		mapper.save(item); 
