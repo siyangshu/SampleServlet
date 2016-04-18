@@ -28,6 +28,16 @@ public class IndexerItem {
     @DynamoDBAttribute(attributeName = "hits")
     public List<Hit> getHits() { return hits; }    
     public void setHits(List<Hit> hits) { this.hits = hits; }
+    
+    @Override
+    public String toString(){
+    	String result = "";
+    	result += word + ":" + url + "\tHits: ";
+    	for (Hit hit : hits) {
+    		result += hit.toString() + "\t";
+    	}
+    	return result;
+    }
 
 }
 

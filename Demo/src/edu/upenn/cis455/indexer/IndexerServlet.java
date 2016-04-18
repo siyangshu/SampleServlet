@@ -10,27 +10,25 @@ import javax.xml.parsers.*;
 import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
+
+import org.jsoup.*;
+import org.jsoup.nodes.*;
+import org.jsoup.select.*;
+
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
+import java.util.*;
 
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
-import com.amazonaws.services.dynamodbv2.document.DeleteItemOutcome;
-import com.amazonaws.services.dynamodbv2.document.DynamoDB;
-import com.amazonaws.services.dynamodbv2.document.Item;
-import com.amazonaws.services.dynamodbv2.document.Table;
-import com.amazonaws.services.dynamodbv2.document.UpdateItemOutcome;
+import com.amazonaws.services.dynamodbv2.document.*;
 import com.amazonaws.services.dynamodbv2.document.spec.DeleteItemSpec;
 import com.amazonaws.services.dynamodbv2.document.spec.UpdateItemSpec;
 import com.amazonaws.services.dynamodbv2.document.utils.NameMap;
 import com.amazonaws.services.dynamodbv2.document.utils.ValueMap;
 import com.amazonaws.services.dynamodbv2.model.ReturnValue;
+import com.amazonaws.services.identitymanagement.model.Position;
 
 import edu.upenn.cis455.indexer.DynamodbConnector;
-import edu.upenn.cis455.mapreduce.Job;
 
 import sun.net.www.http.HttpClient;
 
@@ -50,17 +48,128 @@ public class IndexerServlet extends HttpServlet {
 	}
 
 	public void doGet(HttpServletRequest request, HttpServletResponse response) throws java.io.IOException {
+		String path = request.getPathInfo();
 		PrintWriter out = response.getWriter();
-		connector.createItems();
-		printMessage(out, "hello world");
+		sop(path);
+		if (path.equals("login/")) {
+			out.write("<!DOCTYPE html><html><body><form action=\"login\" method=\"post\">  name:<br>  <input type=\"text\" name=\"name\">  <br>  password:<br>  <input type=\"text\" name=\"password\">  <br><br>  <input type=\"submit\" value=\"submit\"></form> </body></html>");
+			return;
+		} else if (path.equals("logout/")) {
+			HttpSession session=request.getSession();  
+            session.invalidate();
+			printMessage(out, "You are successfully logged out!");
+            return;
+		}
+		
+		HttpSession session = request.getSession(false);  
+        if (session == null) {  
+        	printMessage(out, "Please login first");
+        	return;
+        }  
+	    if (path.equals("parse_content_form/")) {
+			out.write("<!DOCTYPE html><html><body><form action=\"parse_content\" method=\"post\">  url:<br>  <input type=\"text\" name=\"url\">  <br>  content:<br>  <input type=\"text\" name=\"content\">  <br><br>  <input type=\"submit\" value=\"click to submit\"></form> </body></html>");
+		} else {
+			printMessage(out, "Invalid get path: " + path);
+		}
 	}
 
 	@Override
 	public void doPost(HttpServletRequest request, HttpServletResponse response) throws java.io.IOException {
+		String path = request.getPathInfo();
+		PrintWriter out = response.getWriter();
+		if (path.equals("login/")) {
+			String name = request.getParameter("name");  
+	        String password = request.getParameter("password");
+	        if (validUser(name, password)) {
+	        	request.getSession().setAttribute("name", name);
+				printMessage(out, "Welcome!");
+	        } else {
+				printMessage(out, "Wrong username or password!");	        	
+	        }
+	        return;
+		} 
+		
+		HttpSession session = request.getSession(false);  
+        if (session == null) {  
+        	printMessage(out, "Please login first");
+        	return;
+        }  
 
+        else if (path.equals("parse_content/")) {
+			String url = request.getParameter("url");
+			String content = request.getParameter("content");
+			parseContent(url, content);
+		} else {
+			printMessage(out, "Invalid post path: " + path);
+		}
 	}
 
 	void printMessage(PrintWriter out, String message) {
 		out.println("<!DOCTYPE html><html><body><p>" + message + "</p></body></html>");
 	}
+	
+	boolean validUser(String name, String password) {
+		return password.equals("123qweasdzxc");
+	}
+	
+	public void parseContent(String url, String content) {
+		Document doc = Jsoup.parse(content);
+		HitsVisitor visitor = new HitsVisitor();
+        NodeTraversor traversor = new NodeTraversor(visitor);
+        traversor.traverse(doc);
+        for (String word : visitor.wordToHits.keySet()) {
+        	IndexerItem item = new IndexerItem();
+        	item.setWord(word);
+        	item.setUrl(url);
+        	item.setHits(visitor.wordToHits.get(word));
+        	// TODO save or print
+//        	sop(item);
+        	connector.writeItem(item);
+        }
+	}
+	
+    private class HitsVisitor implements NodeVisitor {
+		Map<String, List<Hit>> wordToHits = new HashMap<>();
+		int position = 0;
+
+        // hit when the node is first seen
+		@Override
+        public void head(Node node, int depth) {
+//            String name = node.nodeName();
+            if (node instanceof TextNode) {
+            	String words = ((TextNode) node).text();
+            	for (String word : words.split("\\s+")) {
+            		if (word.isEmpty()) {
+            			continue;
+            		}
+            		String stemmedWord = stem(word);
+            		List<Hit> hits = wordToHits.get(stemmedWord);
+            		if (hits == null) {
+            			hits = new ArrayList<>();
+            		}
+                	Hit hit = new Hit();
+                	hit.setFont(node.attr("style"));
+                	hit.setPosition(position++);
+                	hit.setCapitalization(getCapitalization(word));
+            		hits.add(hit);
+            		wordToHits.put(stemmedWord, hits);
+            	}
+            }
+		}
+
+		@Override
+		public void tail(Node node, int depth) {
+			// TODO Auto-generated method stub
+		}
+		
+		public String stem(String word) {
+			// TODO
+			return word.toLowerCase();
+		}
+		
+		public String getCapitalization(String word) {
+			// TODO
+			return word;
+		}
+    } 
 }

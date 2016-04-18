@@ -31,4 +31,9 @@ public class Hit {
 	public void setCapitalization(String capitalization) {
 		this.capitalization = capitalization;
 	}	
+	
+	@Override
+	public String toString() {
+		return "position: " + position + ", font: " + font + ", capitalization: " + capitalization;
+	}
 }

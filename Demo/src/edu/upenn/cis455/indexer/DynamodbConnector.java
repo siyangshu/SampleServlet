@@ -33,6 +33,10 @@ public class DynamodbConnector {
     public static void sop(Object x) {
     	System.out.println(x);
     }
+    
+    public void writeItem(IndexerItem item) {
+    	mapper.save(item);
+    }
 
 	public void createItems() {
 		IndexerItem item = new IndexerItem();
@@ -46,20 +50,6 @@ public class DynamodbConnector {
 		hits.add(hit);
 		item.setHits(hits);
 		mapper.save(item); 
-		
-//		Table table = dynamoDB.getTable(tableName);
-//        try {
-//
-//            Item item = new Item()
-//                .withPrimaryKey("WORD", "apple")
-//                .withString("URL", "www.apple.com")
-//                .withString("ISBN", "120-1111111111");
-//            table.putItem(item);
-//        } catch (Exception e) {
-//            System.err.println("Create items failed.");
-//            System.err.println(e.getMessage());
-//
-//        }
 	}
 
 }
