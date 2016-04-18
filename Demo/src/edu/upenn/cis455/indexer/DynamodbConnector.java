@@ -1,8 +1,10 @@
 package edu.upenn.cis455.indexer;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 
 import com.amazonaws.AmazonClientException;
@@ -33,8 +35,15 @@ public class DynamodbConnector {
 
 	public void createItems() {
 		IndexerItem item = new IndexerItem();
+		item.setWord("new");
 		item.setUrl("www.google.com");
-		item.setWord("google10");
+		Hit hit = new Hit();
+		hit.capitalization = "ALL UPPERCASE";
+		hit.font = "14";
+		hit.position = 100;
+		List<Hit> hits = new ArrayList<>();
+		hits.add(hit);
+		item.setHits(hits);
 		mapper.save(item); 
 		
 //		Table table = dynamoDB.getTable(tableName);
