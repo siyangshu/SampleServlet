@@ -15,6 +15,7 @@ import com.amazonaws.services.dynamodbv2.datamodeling.JsonMarshaller;
 public class IndexerItem {
 	private String word;
 	private String url;
+	private Integer totalWord;
 	private List<Hit> hits;
         
     @DynamoDBHashKey(attributeName="WORD")  
@@ -25,6 +26,10 @@ public class IndexerItem {
     public String getUrl() {return url; }
     public void setUrl(String url) { this.url = url; }
     
+    @DynamoDBHashKey(attributeName="TOTAL_WORD")  
+    public Integer getTotalWord() { return totalWord;}
+    public void setTotalWord(Integer totalWord) {this.totalWord = totalWord;}
+
     @DynamoDBAttribute(attributeName = "hits")
     public List<Hit> getHits() { return hits; }    
     public void setHits(List<Hit> hits) { this.hits = hits; }

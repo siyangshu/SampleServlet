@@ -29,7 +29,7 @@ import com.amazonaws.services.dynamodbv2.model.ReturnValue;
 import com.amazonaws.services.identitymanagement.model.Position;
 
 import edu.upenn.cis455.indexer.DynamodbConnector;
-
+import edu.upenn.cis455.mapreduce.job.WordCount;
 import sun.net.www.http.HttpClient;
 
 public class IndexerServlet extends HttpServlet {
@@ -126,6 +126,7 @@ public class IndexerServlet extends HttpServlet {
         	IndexerItem item = new IndexerItem();
         	item.setWord(word);
         	item.setUrl(url);
+        	item.setTotalWord(visitor.totalWord);
         	item.setHits(visitor.wordToHits.get(word));
         	// TODO save or print
 //        	sop(item);
@@ -136,10 +137,12 @@ public class IndexerServlet extends HttpServlet {
     private class HitsVisitor implements NodeVisitor {
 		Map<String, List<Hit>> wordToHits = new HashMap<>();
 		int position = 0;
+		int totalWord = 0;
 
         // hit when the node is first seen
 		@Override
         public void head(Node node, int depth) {
+			totalWord += 1;
 //            String name = node.nodeName();
             if (node instanceof TextNode) {
             	String words = ((TextNode) node).text();
