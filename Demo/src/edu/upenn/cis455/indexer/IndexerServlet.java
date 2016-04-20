@@ -29,7 +29,6 @@ import com.amazonaws.services.dynamodbv2.model.ReturnValue;
 import com.amazonaws.services.identitymanagement.model.Position;
 
 import edu.upenn.cis455.indexer.DynamodbConnector;
-import edu.upenn.cis455.mapreduce.job.WordCount;
 import sun.net.www.http.HttpClient;
 
 public class IndexerServlet extends HttpServlet {
