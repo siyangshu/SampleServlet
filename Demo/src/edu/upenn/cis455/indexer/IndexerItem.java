@@ -26,7 +26,7 @@ public class IndexerItem {
     public String getUrl() {return url; }
     public void setUrl(String url) { this.url = url; }
     
-    @DynamoDBHashKey(attributeName="TOTAL_WORD")  
+    @DynamoDBAttribute(attributeName="TOTAL_WORD")  
     public Integer getTotalWord() { return totalWord;}
     public void setTotalWord(Integer totalWord) {this.totalWord = totalWord;}
 
