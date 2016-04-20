@@ -141,7 +141,6 @@ public class IndexerServlet extends HttpServlet {
         // hit when the node is first seen
 		@Override
         public void head(Node node, int depth) {
-			totalWord += 1;
 //            String name = node.nodeName();
             if (node instanceof TextNode) {
             	String words = ((TextNode) node).text();
@@ -149,6 +148,7 @@ public class IndexerServlet extends HttpServlet {
             		if (word.isEmpty()) {
             			continue;
             		}
+        			totalWord += 1;
             		String stemmedWord = stem(word);
             		List<Hit> hits = wordToHits.get(stemmedWord);
             		if (hits == null) {
