@@ -1,58 +1,52 @@
-default master address: 127.0.0.1:8080
-work1 address: 127.0.0.1:8081
+1. storage class (in DynamoDB):
+1.1. deprecated
+1.2. RelevanceUrl
+	hash key: WORD (string)
+	sort key: RELEVANCE_URL (string)
+1.3. Hits
+	hash key: WORD 
+	sort key: URL
+	attribute: HITS (List<Hit>)
+1.4. PageAttributes
+	hash key: URL
+	attribute: 
+		WORD_COUNT (int)
+		TITLE (string)
+		DESCRIPTION (string)
+		MAX_WORD_FREQUENCY (integer)
+	
+2. algorithm:
+2.1. relevance:
+2.1.1. in dynamo db
+	relevance is an 6-digit integer between 0 and 999999
+	0 is the most relevant item (a little weird.. because in ascending order)
+	relevance = word / (total_word_count + 1);
+	relevance = 1000000 * relevance;
+	relevance = 999999 - relevance;
+2.1.2. in java api, in setUrl(url, relevance)
+	relevance is a double between 0 and 1
+	it's meaning is word / (total_word_count + 1)
 
-caution:
-1. in /workerstatus, the servlet will retrieve parameters like `port`, not only from query string but also message body.
-2. the key-value fed in reduce should not be larger than 1024, because the reducer uses bufferedReader.mark(1024) to read ahead and roll back
-3. a sample job form request:
-  job: edu.upenn.cis455.mapreduce.job.WordCount
-  input directory: ./static/word_count_data
-  output directory: ./static/word_count_result
-  The number of map threads to run on each worker: 10
-  The number of reduce threads to run on each worker: 10
-4. In default users can visit /static/word_count_data to see the input data, and visit /static/word_count_result to see the result
-5. to create a new worker.war: modify web.xml (storagedir, port), ant all, 
-6. you could send any GET request to WorkerServlet to verify if WorkerServlet is running. it will return "hello"
-7. the directory in storagedir should end up with /, and use absolute path.
+2.2. stemming
+	use porter stemmer
+	1) remove special char
+	2) to lower case
+	3) stem
 
-- XML format:
--- status page
-  <worker_collection>
-    <worker>
-      <ip></ip>
-      <port></port>
-      <status></status>
-      <job></job>
-      <keys_read></keys_read>
-      <keys_written></keys_written>
-    </worker>
-    <worker>
-    ...
-    </worker>
-  </worker_collection>
-  
-- HTML form format:
--- for submitting jobs (in /status):
-  will post to /job
-  <input type="text" name="job">
-  <input type="text" name="input_directory">
-  <input type="text" name="output_directory">
-  <input type="text" name="map_number">
-  <input type="text" name="reduce_number">
-  
-- servlet init param
--- master (IP:port)
--- storagedir
--- port (listening port)
+2.3. indexing, produce hits
+	for every text with in one node:
+	1) break with space (only space. so word such as U.S.A -> USA)
+	2) remove special characters (including numbers), and save capitalization
+	3) convert to lowercase
+	4) stem 
+	5) for continuous word and two word, produce hits
+	6) won't set font at this time
 
-- file name
-  in spool-out directory, each worker has a output file like "worker1". index start from 1
-  in spool-in directory, it has a file called `reduce_data`
-  
-- url patttern
--- WorkerServlet
-  POST /reset_output
-    will remove the output file if exist
-  
-- test file
--- ./static/word_count_data
+2.4. capitalization:
+	three status:
+	0: no cap
+	1: first letter upper case
+	2: all cap
+	for two-word, it's max(cap1, cap2)
+	if one char and upper case, it's 2.
+	

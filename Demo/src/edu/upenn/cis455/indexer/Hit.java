@@ -6,9 +6,10 @@ import com.amazonaws.services.dynamodbv2.datamodeling.*;
 public class Hit {
 	private Integer position;
 	private String font;
-	private String capitalization;
+	private Integer capitalization;
+	private String textClassification;
 
-	@DynamoDBAttribute(attributeName = "position")
+	@DynamoDBAttribute(attributeName = "POS")
 	public Integer getPosition() {
 		return position;
 	}
@@ -16,7 +17,7 @@ public class Hit {
 		this.position = position;
 	}
 
-	@DynamoDBAttribute(attributeName = "font")
+	@DynamoDBAttribute(attributeName = "FONT")
 	public String getFont() {
 		return font;
 	}
@@ -24,14 +25,22 @@ public class Hit {
 		this.font = font;
 	}
 
-	@DynamoDBAttribute(attributeName = "capitalization")
-	public String getCapitalization() {
+	@DynamoDBAttribute(attributeName = "CAPTL")
+	public Integer getCapitalization() {
 		return capitalization;
 	}
-	public void setCapitalization(String capitalization) {
+	public void setCapitalization(Integer capitalization) {
 		this.capitalization = capitalization;
 	}	
 	
+	@DynamoDBAttribute(attributeName = "CLASS")
+	public String getTextClassification() {
+		return textClassification;
+	}
+	public void setTextClassification(String textClassification) {
+		this.textClassification = textClassification;
+	}	
+
 	@Override
 	public String toString() {
 		return "position: " + position + ", font: " + font + ", capitalization: " + capitalization;

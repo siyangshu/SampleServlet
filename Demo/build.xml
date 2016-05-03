@@ -2,6 +2,7 @@
   <target name="init">
   	<tstamp/>
     <mkdir dir="target/indexer/WEB-INF/classes"/>
+    <mkdir dir="target/spark/classes"/>
     <mkdir dir="classes"/>
   </target>
   
@@ -26,7 +27,25 @@
   
   <target name="clean">
     <delete dir="target/indexer/WEB-INF/classes"/>
+    <delete dir="target/spark/classes"/>
     <delete dir="classes"/>
     <delete file="indexer.war"/>
+  </target>
+	
+  <target name="spark" depends="compile-spark">
+    <jar destfile="spark-example.jar">
+      <fileset dir="target/spark/classes" includes="*.class"/>
+	  <manifest>
+	    <attribute name="Main-Class" value="SparkExample"/>
+	  </manifest>
+      <zipfileset dir="lib/" includes="*.jar"/>
+    </jar>
+  </target>
+	
+  <target name="compile-spark" depends="init">
+    <javac target="1.7" srcdir="src" destdir="target/spark/classes" includes="SparkExample.java" deprecation="on"
+     debug="true" includeantruntime="false" classpath="lib/scala-library.jar:lib/spark-core_2.10-1.0.0.jar">
+       <compilerarg value="-Xlint"/>
+    </javac>
   </target>
 </project>
