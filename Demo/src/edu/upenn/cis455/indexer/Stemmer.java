@@ -1,44 +1,14 @@
 package edu.upenn.cis455.indexer;
 
-/*
-
-   Porter stemmer in Java. The original paper is in
-
-       Porter, 1980, An algorithm for suffix stripping, Program, Vol. 14,
-       no. 3, pp 130-137,
-
-   See also http://www.tartarus.org/~martin/PorterStemmer
-
-   History:
-
-   Release 1
-
-   Bug 1 (reported by Gonzalo Parra 16/10/99) fixed as marked below.
-   The words 'aed', 'eed', 'oed' leave k at 'a' for step 3, and b[k-1]
-   is then out outside the bounds of b.
-
-   Release 2
-
-   Similarly,
-
-   Bug 2 (reported by Steve Dyrdahl 22/2/00) fixed as marked below.
-   'ion' by itself leaves j = -1 in the test for 'ion' in step 5, and
-   b[j] is then outside the bounds of b.
-
-   Release 3
-
-   Considerably revised 4/9/00 in the light of many helpful suggestions
-   from Brian Goetz of Quiotix Corporation (brian@quiotix.com).
-
-   Release 4
-
-*/
-
 import java.io.*;
+import java.util.*;
 import java.util.regex.Pattern;
 
 /**
-  * from http://tartarus.org/martin/PorterStemmer/java.txt
+ * stop words: http://www.ranks.nl/stopwords
+ * 
+  * porter stmmer from http://tartarus.org/martin/PorterStemmer/java.txt
+  * 
   * Stemmer, implementing the Porter Stemming Algorithm
   *
   * The Stemmer class transforms a word into its root form.  The input
@@ -48,7 +18,8 @@ import java.util.regex.Pattern;
 
 public class Stemmer {
 	PorterStemmer stemmer = new PorterStemmer();
-    private Pattern specialChar = Pattern.compile("[^a-zA-Z]");
+    private Pattern specialChar = Pattern.compile("[^a-zA-Z']");
+    private Set<String> stopWords = new HashSet<String>(Arrays.asList("a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are", "aren't", "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but", "by", "can't", "cannot", "could", "couldn't", "did", "didn't", "do", "does", "doesn't", "doing", "don't", "down", "during", "each", "few", "for", "from", "further", "had", "hadn't", "has", "hasn't", "have", "haven't", "having", "he", "he'd", "he'll", "he's", "her", "here", "here's", "hers", "herself", "him", "himself", "his", "how", "how's", "i", "i'd", "i'll", "i'm", "i've", "if", "in", "into", "is", "isn't", "it", "it's", "its", "itself", "let's", "me", "more", "most", "mustn't", "my", "myself", "no", "nor", "not", "of", "off", "on", "once", "only", "or", "other", "ought", "our", "ours	ourselves", "out", "over", "own", "same", "shan't", "she", "she'd", "she'll", "she's", "should", "shouldn't", "so", "some", "such", "than", "that", "that's", "the", "their", "theirs", "them", "themselves", "then", "there", "there's", "these", "they", "they'd", "they'll", "they're", "they've", "this", "those", "through", "to", "too", "under", "until", "up", "very", "was", "wasn't", "we", "we'd", "we'll", "we're", "we've", "were", "weren't", "what", "what's", "when", "when's", "where", "where's", "which", "while", "who", "who's", "whom", "why", "why's", "with", "won't", "would", "wouldn't", "you", "you'd", "you'll", "you're", "you've", "your", "yours", "yourself", "yourselves"));
 
 	public String stem(String word) {
 		word = removeSpecialCharacter(word);
@@ -63,7 +34,8 @@ public class Stemmer {
 	}
 	
 	public boolean isStopWord(String word) {
-		return false;
+		word = removeSpecialCharacter(word).toLowerCase();
+		return stopWords.contains(word);
 	}
 }
 

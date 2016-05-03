@@ -44,7 +44,7 @@ public class PageAttributesItem {
 		this.wordCount = wordCount;
 	}
 
-	@DynamoDBHashKey(attributeName="MAX_WORD_FREQUENCY")
+	@DynamoDBAttribute(attributeName="MAX_WORD_FREQUENCY")
 	public Integer getMaxWordFrequency() {
 		return maxWordFrequency;
 	}

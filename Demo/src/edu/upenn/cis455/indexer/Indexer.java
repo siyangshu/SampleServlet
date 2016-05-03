@@ -3,14 +3,13 @@ package edu.upenn.cis455.indexer;
 import java.io.*;
 import java.nio.file.*;
 import java.util.*;
-import java.util.regex.*;
-
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.*;
 import org.jsoup.select.*;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.AmazonServiceException;
+import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClient;
 import com.amazonaws.services.dynamodbv2.datamodeling.*;
@@ -19,16 +18,22 @@ import com.amazonaws.services.s3.model.*;
 
 import edu.upenn.cis455.indexer.item.*;
 
+class Debug {
+    static final boolean debug = false;
+    static final boolean dynamodbOpen = false;
+    static final boolean printEmptyContentUrl = false;
+}
+
 public class Indexer {
-	IndexingPerformer indexingPerformer = new IndexingPerformer();
+	DynamodbConnector dynamodbConnector = new DynamodbConnector();
+	IndexingPerformer indexingPerformer = new IndexingPerformer(dynamodbConnector);
 	
 	public List<String> getRelevantUrls(String stemmedWord, int atMost) {
-		
-		return null;
+		return dynamodbConnector.getRelevantUrls(stemmedWord, atMost);
 	}
 	
 	public List<Hit> getHits(String stemmedPhrase, String url) {
-		return null;
+		return dynamodbConnector.getHits(stemmedPhrase, url);
 	}
 	
 	public void startIndexing() {
@@ -37,6 +42,7 @@ public class Indexer {
 	
 	public void stopIndexing() {
 		indexingPerformer.stop();
+		dynamodbConnector.flush();
 //		for (IndexingPerformer performer : indexingPerformers) {
 //			performer.stop();
 //		}
@@ -45,10 +51,24 @@ public class Indexer {
 	public void getIndexingStatus() {
 		
 	}
+
+	public void clearTable() {
+		System.out.println("Are you sure you want to clear all dynamodb tables? enter yes to confirm: ");
+		Scanner scanner = new Scanner(System.in);
+		String input = scanner.nextLine();
+		if (input.equals("yes")) {
+			System.out.println("clearing...");
+			dynamodbConnector.clearTable();
+			System.out.println("done");
+		} else {
+			System.out.println("canceled");
+		}
+	}
 }
 
 class DynamodbConnector {
 	DynamoDBMapper mapper = new DynamoDBMapper(new AmazonDynamoDBClient(new ProfileCredentialsProvider()));
+	int writtenItemCount = 0;
 	
 	List<String> getRelevantUrls(String stemmedWord, int atMost) {
 		// create item
@@ -71,13 +91,121 @@ class DynamodbConnector {
 		HitsItem item = mapper.load(HitsItem.class, stemmedPhrase, url);
 		return item.getHits();
 	}	
+
+	Vector<RelevanceUrlItem> relevanceUrlItems = new Vector<>();
+	void save(RelevanceUrlItem item) {
+		if (relevanceUrlItems.size() > 100) {
+			synchronized (this) {
+				if (relevanceUrlItems.size() > 100) {
+					batchSave(relevanceUrlItems);
+					relevanceUrlItems = new Vector<>();
+				}
+			}
+		}
+		relevanceUrlItems.add(item);
+	}
+	
+	Vector<HitsItem> hitsItems = new Vector<>();
+	void save(HitsItem item) {
+		if (hitsItems.size() > 100) {
+			synchronized (this) {
+				if (hitsItems.size() > 100) {
+					batchSave(hitsItems);
+					hitsItems = new Vector<>();
+				}
+			}
+		}
+		hitsItems.add(item);
+	}
+	
+	Vector<PageAttributesItem> pageAttributesItems = new Vector<>();
+	void save(PageAttributesItem item) {
+		if (pageAttributesItems.size() > 100) {
+			synchronized (this) {
+				if (pageAttributesItems.size() > 10) {
+					batchSave(pageAttributesItems);
+					pageAttributesItems = new Vector<>();
+				}
+			}
+		}
+		pageAttributesItems.add(item);
+	}
+	
+	synchronized void flush() {
+		mapper.batchSave(hitsItems);
+		hitsItems = new Vector<>();
+		mapper.batchSave(pageAttributesItems);
+		pageAttributesItems = new Vector<>();
+		mapper.batchSave(relevanceUrlItems);
+		relevanceUrlItems = new Vector<>();
+	}
+
+	void clearTable() {
+		if (!Debug.dynamodbOpen) {
+			return;
+		}
+		int count = 0;
+		DynamoDBScanExpression scanExpression = new DynamoDBScanExpression();
+		{
+			PaginatedScanList<RelevanceUrlItem> result = mapper.scan(RelevanceUrlItem.class,  scanExpression);
+			for (RelevanceUrlItem data : result) {
+				sop("deleting " + count++);
+			    mapper.delete(data);
+			}
+//			List<DynamoDBMapper.FailedBatch> fail = mapper.batchDelete(result);
+//			sop("deleted " + fail.size() + "/" + result.size());
+		}
+		{
+			PaginatedScanList<PageAttributesItem> result = mapper.scan(PageAttributesItem.class,  scanExpression);
+			for (PageAttributesItem data : result) {
+				sop("deleting " + count++);
+			    mapper.delete(data);
+			}
+		}
+		{
+			PaginatedScanList<HitsItem> result = mapper.scan(HitsItem.class,  scanExpression);
+			for (HitsItem data : result) {
+				sop("deleting " + count++);
+			    mapper.delete(data);
+			}
+		}
+	}
+	
+	static void sop(Object x) {
+		System.out.println(x);
+	}
+
+	public List<DynamoDBMapper.FailedBatch> batchSave(List<? extends Object> objectsToSave) {
+		writtenItemCount += objectsToSave.size();
+		if (Debug.dynamodbOpen) {
+			List<DynamoDBMapper.FailedBatch> results = mapper.batchSave(objectsToSave);
+			if (results.size() != 0) {
+				System.err.println("fail to save " + results.size() + " item.");
+			}
+			return results;			
+		} else {
+			return null;			
+		}
+	}
+	
+	<T> void save(T object) {
+		writtenItemCount += 1;
+//		sop("here1");
+		assert(false);
+		mapper.save(object);
+	}
 }
 
 class IndexingPerformer {
-	final int THREAD_NUMBER = 100;
+	final int THREAD_NUMBER = 10;
 	List<IndexingPerformerThread> indexingPerformerThreads = new ArrayList<>();
-	DynamoDBMapper mapper = new DynamoDBMapper(new AmazonDynamoDBClient(new ProfileCredentialsProvider()));
+	DynamodbConnector dynamodbConnector;
 	S3Connector s3Connector = new S3Connector();
+	int indexingPageCount = 0;
+	
+	public IndexingPerformer(DynamodbConnector dynamodbConnector) {
+		this.dynamodbConnector = dynamodbConnector;
+	}
 	
 	static void sop(Object x) {
 		System.out.println(x);
@@ -118,7 +246,7 @@ class IndexingPerformer {
 		return s3Connector.getUrl();
 	}
 	
-	String getUrlContent(String url) throws IOException {
+	String getUrlContent(String url) {
 		return s3Connector.getUrlContent(url);
 	}
 	
@@ -137,11 +265,11 @@ class IndexingPerformer {
 				}
 				// get the content
 				String content;
-				try {
-					content = getUrlContent(url);
-				} catch (IOException e) {
-					System.err.println("can not get the content of url: " + url);
-					e.printStackTrace();
+				content = getUrlContent(url);
+				if (content == null) {
+					if (Debug.printEmptyContentUrl) {
+						System.out.println("empty inputstream from s3. url: " + url);
+					}
 					continue;
 				}
 				// parse
@@ -152,34 +280,54 @@ class IndexingPerformer {
 		}
 				
 		void parseContent(String url, String content) {
+//			if (indexingPageCount % 10 == 0) {
+				sop("current time: " + System.currentTimeMillis());
+				sop("have saved " + dynamodbConnector.writtenItemCount + " items to dynamodb");
+				sop("parsing " + indexingPageCount++);
+//			}
 			Document doc = Jsoup.parse(content);
 			HitsVisitor visitor = new HitsVisitor();
 	        NodeTraversor traversor = new NodeTraversor(visitor);
 	        traversor.traverse(doc);
 	        Set<String> words = visitor.getWordToHits().keySet();
+	        if (words.isEmpty()) {
+	        	if (Debug.printEmptyContentUrl) {
+		        	sop("empty file, no word to save. skip. " + url);	        		
+	        	}
+	        	return;
+	        }
 	        for (String word : words) {
+	        	if (Debug.debug) {
+		        	if (word.length() <= 1) {
+		        		for (String s : visitor.wordToStemmedWord_debug.keySet()) {
+		        			sop(s + "=>" + visitor.wordToStemmedWord_debug.get(s));
+		        		}
+			        	assert(false);
+		        	}
+	        	}
 	        	// save to table RelevanceUrl
 	        	RelevanceUrlItem relevanceUrlItem = new RelevanceUrlItem();
-	        	Double relevance = visitor.getWordToRelevance().get(word);
+	        	Double relevance = null;
+	        	relevance = visitor.getWordToRelevance().get(word);
 	        	relevanceUrlItem.setWord(word);
 	        	relevanceUrlItem.setUrl(url, relevance);
-	        	mapper.save(relevanceUrlItem);
+	        	dynamodbConnector.save(relevanceUrlItem);
 	        	// save to table Hits
 	        	HitsItem hitsItem = new HitsItem();
 	        	hitsItem.setWord(word);
 	        	hitsItem.setUrl(url);
 	        	hitsItem.setHits(visitor.getWordToHits().get(word));
-	        	mapper.save(hitsItem);
+	        	dynamodbConnector.save(hitsItem);
 	        }
         	// save to table PageAttributes
 	        // TODO? css query
         	PageAttributesItem pageAttributesItem = new PageAttributesItem();
         	pageAttributesItem.setUrl(url);
-        	pageAttributesItem.setTitle(doc.select("head/title").text());
+        	pageAttributesItem.setTitle(doc.select("head").select("title").text());
         	pageAttributesItem.setWordCount(visitor.getWordCount());
         	pageAttributesItem.setDescription(doc.select("p[0]").text());
         	pageAttributesItem.setMaxWordFrequency(visitor.getMaxFrequency());
-        	mapper.save(pageAttributesItem);
+        	dynamodbConnector.save(pageAttributesItem);
 		}	
 	}
 }
@@ -192,7 +340,12 @@ class S3Connector {
 	String urlContentS3BucketName = "newcrawler";
 	String toBeIndexedUrlS3BucketName = "urlqueue";
 	String toBeIndexedUrlS3Key = "";
-	AmazonS3 s3client = new AmazonS3Client();
+	AmazonS3 s3client;
+	
+	S3Connector() {
+		AWSCredentials credentials = new ProfileCredentialsProvider("profile2").getCredentials();
+		s3client = new AmazonS3Client(credentials);
+	}
 
 	private void retrieveUrlQueueFromS3() {
 	}
@@ -321,8 +474,9 @@ class S3Connector {
 	    try {
 			File file = new File(urlQueueIndexFile);
 			if (!file.exists()) {
-				file.createNewFile();
-			    urlQueueIndex = 0;
+				writeUrlQueueIndex(0);
+//				file.createNewFile();
+//			    urlQueueIndex = 0;
 			}  else {
 				Scanner sc = new Scanner(file);
 				urlQueueIndex = sc.nextInt();
@@ -347,11 +501,16 @@ class S3Connector {
 		return line;
 	}
 	
-	String getUrlContent(String url) throws IOException {
+	String getUrlContent(String url) {
 		String bucketName = urlContentS3BucketName;
 		String key = url;
 		S3Object s3object = s3client.getObject(new GetObjectRequest(bucketName, key));
-		return new Scanner(s3object.getObjectContent()).useDelimiter("\\A").next();
+		try {
+			String result = new Scanner(s3object.getObjectContent()).useDelimiter("\\A").next();
+			return result;			
+		} catch (NoSuchElementException e) {
+			return null;
+		}
 	}
 }
 
@@ -359,12 +518,15 @@ class HitsVisitor implements NodeVisitor {
 	private Map<String, List<Hit>> wordToHits = new HashMap<>();
 	private Map<String, List<Hit>> twoWordToHits;
 	private Map<String, Double> wordToRelevance;
+	Map<String, String> wordToStemmedWord_debug = new HashMap<>();
 	private int curPosition = 0;
 	private int totalWordCount = 0;
 	private Stemmer stemmer = new Stemmer();
 //    private Pattern specialChar = Pattern.compile("[^a-zA-Z]");
     private Set<String> textClassification = new HashSet<>(Arrays.asList("title", "h1", "h2", "h3"));
     private final int TEXT_CLASSIFICATION_ITERATE_LENGTH = 2;
+    private final int MIN_WORD_LENGTH = 2;
+    private final int MAX_WORD_LENGTH = 20;
 
 	Map<String, List<Hit>> getWordToHits() {
 		return wordToHits;
@@ -387,6 +549,10 @@ class HitsVisitor implements NodeVisitor {
 		}
 		return maxFrequency;
 	}
+	
+	boolean couldIndexing(String lowerWord) {
+		return !stemmer.isStopWord(lowerWord) && MIN_WORD_LENGTH <= lowerWord.length() && lowerWord.length() <= MAX_WORD_LENGTH;
+	}
 
 	// hit when the node is first seen
 	@Override
@@ -397,47 +563,56 @@ class HitsVisitor implements NodeVisitor {
         if (node instanceof TextNode) {
         	String[] wordsArray = ((TextNode) node).text().split("\\s+");
         	// remove special letters, calc capitalization
-        	List<String> words = new ArrayList<>();
+        	List<String> lowerWords = new ArrayList<>();
         	List<Integer> capitalization = new ArrayList<>();
         	for (int i = 0; i < wordsArray.length; i++) {
-        		if (wordsArray[i].isEmpty()) {
+        		String word = stemmer.removeSpecialCharacter(wordsArray[i]);
+        		if (word.isEmpty()) {
         			continue;
         		}
-        		capitalization.add(calculateCapitalization(wordsArray[i]));
-        		words.add(stemmer.stem(wordsArray[i]));
+        		capitalization.add(calculateCapitalization(word));
+        		lowerWords.add(word.toLowerCase());
+        		if (Debug.debug) {
+            		wordToStemmedWord_debug.put(wordsArray[i], stemmer.stem(word.toLowerCase()));        			
+        		}
         	}
         	// produce hit
         	String textClassification = calculateTextClassification(node);
-        	for (int i = 0; i < words.size(); i++) {
-    			totalWordCount += 1;
-    			String word;
+        	for (int i = 0; i < lowerWords.size(); i++) {
+    			String word = null;
+    			List<Hit> hits = null;
+    			Hit hit = null;
     			// one-word
-    			word = words.get(i);
-        		List<Hit> hits = wordToHits.get(word);
-        		if (hits == null) {
-        			hits = new ArrayList<>();
-        		}
-            	Hit hit = new Hit();
-            	hit.setPosition(curPosition++);
-            	hit.setCapitalization(capitalization.get(i));
-            	hit.setTextClassification(textClassification);
-        		hits.add(hit);
-        		wordToHits.put(word, hits);
+    			word = lowerWords.get(i);
+    			if (couldIndexing(word)) {
+    				word = stemmer.stem(word);
+            		hits = wordToHits.get(word);
+            		if (hits == null) {
+            			hits = new ArrayList<>();
+            		}
+                	hit = new Hit();
+                	hit.setPosition(curPosition);
+                	hit.setCapitalization(capitalization.get(i));
+                	hit.setTextClassification(textClassification);
+            		hits.add(hit);
+            		wordToHits.put(word, hits);    				
+    			}
         		// two-word
-        		if (i == words.size() - 1) {
-        			break;
+        		if (i < lowerWords.size() - 1 && couldIndexing(lowerWords.get(i)) && couldIndexing(lowerWords.get(i + 1))) {
+            		word = stemmer.stem(lowerWords.get(i)) + " " + stemmer.stem(lowerWords.get(i + 1));
+            		hits = twoWordToHits.get(word);
+            		if (hits == null) {
+            			hits = new ArrayList<>();
+            		}
+                	hit = new Hit();
+                	hit.setPosition(curPosition);
+                	hit.setCapitalization(Math.max(capitalization.get(i), capitalization.get(i)));
+                	hit.setTextClassification(textClassification);
+            		hits.add(hit);
+            		twoWordToHits.put(word, hits); 
         		}
-        		word = words.get(i) + " " + words.get(i + 1);
-        		hits = twoWordToHits.get(word);
-        		if (hits == null) {
-        			hits = new ArrayList<>();
-        		}
-            	hit = new Hit();
-            	hit.setPosition(curPosition);
-            	hit.setCapitalization(Math.max(capitalization.get(i), capitalization.get(i)));
-            	hit.setTextClassification(textClassification);
-        		hits.add(hit);
-        		twoWordToHits.put(word, hits);        		
+    			totalWordCount++;
+        		curPosition++;
         	}
         }
 	}
@@ -459,7 +634,7 @@ class HitsVisitor implements NodeVisitor {
 			}
 			twoWordToHits = null;
 			// init word relevance
-			Map<String, Double> wordToRelevance = new HashMap<>();
+			wordToRelevance = new HashMap<>();
 			for (String phrase : wordToHits.keySet()) {
 				double relevance = 1.0 * wordToHits.get(phrase).size() / (totalWordCount + 1);
 				wordToRelevance.put(phrase, relevance);
@@ -467,6 +642,11 @@ class HitsVisitor implements NodeVisitor {
 		}
 	}
 	
+	public static void sop(Object x) {
+		System.out.println(x);		
+	}
+
+
 	private int calculateCapitalization(String word) {
 		word = stemmer.removeSpecialCharacter(word);
 		int cap = 0;

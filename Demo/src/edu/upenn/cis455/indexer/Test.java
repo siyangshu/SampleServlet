@@ -12,15 +12,17 @@ public class Test {
 	}
 
 	public static void main(String[] args) {
-//		Stemmer stemmer = new Stemmer();
-//		sop(stemmer.stem("only"));
-		sop("A!N@N#M.$".toUpperCase().equals("A!N@N#M.$"));
-		
-//		IndexerServlet servlet = new IndexerServlet();
-////		ServletConfig config = new GenericServlet();
-//		servlet.init(null);
-//		String content = "<!doctype html><html><head>    <title>SIYANG Shu siyang Shu</title></head><body>    <h1>        Head line.    </h1>    <p>        Paragraph        <a href=\"http://www.google.com/\">Google</a>     </p>    <img src=\"demo.jpeg\"></body></html>";
-//		servlet.parseContent("example.com", content);
+        String workingDirectory = System.getProperty("user.dir");
+        System.out.println("Working Directory = " + workingDirectory);
+		Indexer indexer = new Indexer();
+		indexer.clearTable();
+		indexer.startIndexing();
+		try {
+			Thread.sleep(300_000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 }
